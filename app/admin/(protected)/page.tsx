@@ -13,20 +13,26 @@ const TABS = [
 ]
 
 const SECTIONS = [
-  { prefix: 'hero_',       label: '🎤 Hero' },
-  { prefix: 'apropos_',    label: '👥 À propos' },
-  { prefix: 'cible',       label: '🎯 Pour qui ?' },
-  { prefix: 'formule',     label: '🎵 Formules' },
-  { prefix: 'videos_',     label: '🎬 Vidéos' },
-  { prefix: 'galerie_',    label: '📷 Galerie' },
-  { prefix: 'agenda_',     label: '📅 Agenda' },
-  { prefix: 'refs_',       label: '🤝 Références' },
-  { prefix: 'faq_',        label: '❓ FAQ' },
-  { prefix: 'contact_',    label: '📩 Contact' },
-  { prefix: 'etape',       label: '📋 Étapes contact' },
-  { prefix: 'footer_',     label: '🔻 Footer' },
-  { prefix: 'mobile_',     label: '📱 Mobile' },
+  { prefix: 'hero_',          label: '🎤 Hero' },
+  { prefix: 'apropos_',       label: '👥 À propos' },
+  { prefix: 'cibles_',        label: '🎯 Titres "Pour qui ?"' },
+  { prefix: 'cible1_',        label: '🎪 Cible 1 — Festivals' },
+  { prefix: 'cible2_',        label: '💍 Cible 2 — Mariages' },
+  { prefix: 'cible3_',        label: '🤝 Cible 3 — ASBL' },
+  { prefix: 'formules_',      label: '🎵 Titres Formules' },
+  { prefix: 'formule1_',      label: '⚡ Formule 1 — Dynamique' },
+  { prefix: 'formule2_',      label: '🌙 Formule 2 — Lounge' },
+  { prefix: 'videos_',        label: '🎬 Vidéos' },
+  { prefix: 'galerie_',       label: '📷 Galerie' },
+  { prefix: 'agenda_',        label: '📅 Agenda' },
+  { prefix: 'refs_',          label: '🏆 Références' },
+  { prefix: 'faq_',           label: '❓ FAQ' },
+  { prefix: 'contact_',       label: '📩 Contact' },
+  { prefix: 'etape',          label: '📋 Étapes contact' },
+  { prefix: 'footer_',        label: '🔻 Footer' },
+  { prefix: 'mobile_',        label: '📱 Mobile CTA' },
 ]
+
 
 export default function AdminPage() {
   const [tab, setTab] = useState('contenu')
