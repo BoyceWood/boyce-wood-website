@@ -12,6 +12,22 @@ const TABS = [
   { id: 'references',  label: '🤝 Références' },
 ]
 
+const SECTIONS = [
+  { prefix: 'hero_',       label: '🎤 Hero' },
+  { prefix: 'apropos_',    label: '👥 À propos' },
+  { prefix: 'cible',       label: '🎯 Pour qui ?' },
+  { prefix: 'formule',     label: '🎵 Formules' },
+  { prefix: 'videos_',     label: '🎬 Vidéos' },
+  { prefix: 'galerie_',    label: '📷 Galerie' },
+  { prefix: 'agenda_',     label: '📅 Agenda' },
+  { prefix: 'refs_',       label: '🤝 Références' },
+  { prefix: 'faq_',        label: '❓ FAQ' },
+  { prefix: 'contact_',    label: '📩 Contact' },
+  { prefix: 'etape',       label: '📋 Étapes contact' },
+  { prefix: 'footer_',     label: '🔻 Footer' },
+  { prefix: 'mobile_',     label: '📱 Mobile' },
+]
+
 export default function AdminPage() {
   const [tab, setTab] = useState('contenu')
   const supabase = createClient()
@@ -75,18 +91,22 @@ export default function AdminPage() {
 
 /* ── TAB CONTENU ── */
 function TabContenu({ supabase }: { supabase: SupabaseClient }) {
-  const [rows, setRows] = useState<{ cle: string; valeur: string; description: string }[]>([])
+  const [rows, setRows] = useState<{ cle: string; valeur: string; description?: string; ordre?: number }[]>([])
   const [values, setValues] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState('hero_')
 
   useEffect(() => {
-    supabase.from('contenu').select('*').order('cle').then(({ data }) => {
-      setRows(data || [])
-      const init: Record<string, string> = {}
-      data?.forEach(r => { init[r.cle] = r.valeur })
-      setValues(init)
-    })
+    supabase.from('contenu').select('*')
+      .order('ordre', { ascending: true })
+      .order('cle', { ascending: true })
+      .then(({ data }) => {
+        setRows(data || [])
+        const init: Record<string, string> = {}
+        data?.forEach(r => { init[r.cle] = r.valeur })
+        setValues(init)
+      })
   }, [])
 
   async function save(cle: string) {
@@ -97,30 +117,87 @@ function TabContenu({ supabase }: { supabase: SupabaseClient }) {
     setTimeout(() => setSaved(null), 2000)
   }
 
+  async function saveAll(prefix: string) {
+    const sectionRows = rows.filter(r => r.cle.startsWith(prefix))
+    for (const row of sectionRows) {
+      await supabase.from('contenu').update({ valeur: values[row.cle] }).eq('cle', row.cle)
+    }
+    setSaved('__all__' + prefix)
+    setTimeout(() => setSaved(null), 2000)
+  }
+
+  const visibleSections = SECTIONS.filter(s =>
+    rows.some(r => r.cle.startsWith(s.prefix))
+  )
+
+  const sectionRows = rows.filter(r => r.cle.startsWith(activeSection))
+
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="max-w-5xl">
       <h2 className="text-lg font-semibold mb-6" style={{ color: '#e1a265' }}>Textes du site</h2>
-      {rows.map(row => (
-        <div key={row.cle} className="rounded-2xl p-5"
-             style={{ backgroundColor: '#2a1f1a', border: '1px solid #3d2e26' }}>
-          <label className="block text-xs mb-1 font-mono" style={{ color: '#956d4d' }}>{row.cle}</label>
-          {row.description && <p className="text-xs mb-2" style={{ color: '#7a6355' }}>{row.description}</p>}
-          <div className="flex gap-3">
-            <textarea
-              value={values[row.cle] ?? ''}
-              rows={(values[row.cle] ?? '').length > 80 ? 3 : 1}
-              onChange={e => setValues(v => ({ ...v, [row.cle]: e.target.value }))}
-              className="flex-1 px-3 py-2 rounded-lg text-sm resize-none outline-none"
-              style={{ backgroundColor: '#1e1510', border: '1px solid #3d2e26', color: '#f5ede3' }}
-            />
-            <button onClick={() => save(row.cle)}
-                    className="px-4 py-2 rounded-lg text-xs font-semibold self-start transition-all"
-                    style={{ backgroundColor: saved === row.cle ? '#4a7c59' : '#e1a265', color: '#2a1f1a' }}>
-              {saving === row.cle ? '…' : saved === row.cle ? '✓ Sauvé' : 'Sauver'}
+
+      <div className="flex gap-4">
+        {/* Sidebar sections */}
+        <div className="w-48 shrink-0 space-y-1">
+          {visibleSections.map(s => (
+            <button
+              key={s.prefix}
+              onClick={() => setActiveSection(s.prefix)}
+              className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={activeSection === s.prefix
+                ? { backgroundColor: '#e1a265', color: '#2a1f1a' }
+                : { backgroundColor: '#2a1f1a', color: '#956d4d' }}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Champs de la section */}
+        <div className="flex-1 space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold" style={{ color: '#c4a882' }}>
+              {visibleSections.find(s => s.prefix === activeSection)?.label}
+            </p>
+            <button
+              onClick={() => saveAll(activeSection)}
+              className="px-5 py-2 rounded-xl text-xs font-semibold transition-all"
+              style={{
+                backgroundColor: saved === '__all__' + activeSection ? '#4a7c59' : '#3d2e26',
+                color: saved === '__all__' + activeSection ? 'white' : '#c4a882'
+              }}>
+              {saved === '__all__' + activeSection ? '✓ Tout sauvé' : 'Tout sauver'}
             </button>
           </div>
+
+          {sectionRows.map(row => (
+            <div key={row.cle} className="rounded-2xl p-5"
+                 style={{ backgroundColor: '#2a1f1a', border: '1px solid #3d2e26' }}>
+              <label className="block text-xs mb-1 font-mono" style={{ color: '#956d4d' }}>{row.cle}</label>
+              {row.description && <p className="text-xs mb-2" style={{ color: '#7a6355' }}>{row.description}</p>}
+              <div className="flex gap-3">
+                <textarea
+                  value={values[row.cle] ?? ''}
+                  rows={(values[row.cle] ?? '').length > 80 ? 3 : 1}
+                  onChange={e => setValues(v => ({ ...v, [row.cle]: e.target.value }))}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm resize-none outline-none"
+                  style={{ backgroundColor: '#1e1510', border: '1px solid #3d2e26', color: '#f5ede3' }}
+                />
+                <button onClick={() => save(row.cle)}
+                        className="px-4 py-2 rounded-lg text-xs font-semibold self-start transition-all"
+                        style={{ backgroundColor: saved === row.cle ? '#4a7c59' : '#e1a265', color: '#2a1f1a' }}>
+                  {saving === row.cle ? '…' : saved === row.cle ? '✓' : 'Sauver'}
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {sectionRows.length === 0 && (
+            <div className="text-center py-12 rounded-2xl" style={{ backgroundColor: '#2a1f1a' }}>
+              <p style={{ color: '#956d4d' }}>Aucun champ dans cette section</p>
+            </div>
+          )}
         </div>
-      ))}
+      </div>
     </div>
   )
 }
@@ -182,6 +259,9 @@ function TabMedias({ supabase }: { supabase: SupabaseClient }) {
     await load()
   }
 
+  const photos = medias.filter(m => m.type === 'photo')
+  const videos = medias.filter(m => m.type === 'video')
+
   return (
     <div className="max-w-4xl space-y-8">
       <h2 className="text-lg font-semibold" style={{ color: '#e1a265' }}>Médias</h2>
@@ -220,37 +300,68 @@ function TabMedias({ supabase }: { supabase: SupabaseClient }) {
         </div>
       </div>
 
-      {/* Grille médias */}
-      {medias.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {medias.map(m => (
-            <div key={m.id} className="relative group rounded-xl overflow-hidden"
-                 style={{ backgroundColor: '#2a1f1a', border: '1px solid #3d2e26', opacity: m.actif ? 1 : 0.5 }}>
-              <img
-                src={m.type === 'photo' ? m.url : `https://img.youtube.com/vi/${m.youtube_id}/mqdefault.jpg`}
-                alt={m.legende || ''}
-                className="w-full aspect-square object-cover"
-              />
-              {m.type === 'video' && (
+      {/* Vidéos */}
+      {videos.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: '#c4a882' }}>🎬 Vidéos ({videos.length})</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {videos.map(m => (
+              <div key={m.id} className="relative group rounded-xl overflow-hidden"
+                   style={{ backgroundColor: '#2a1f1a', border: '1px solid #3d2e26', opacity: m.actif ? 1 : 0.5 }}>
+                <img src={`https://img.youtube.com/vi/${m.youtube_id}/mqdefault.jpg`}
+                     alt={m.legende || ''} className="w-full aspect-video object-cover" />
                 <div className="absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold"
                      style={{ backgroundColor: '#e1a265', color: '#2a1f1a' }}>YT</div>
-              )}
-              <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 p-2">
-                <button onClick={() => toggleActif(m.id, m.actif)}
-                        className="w-full py-1.5 rounded-lg text-xs font-semibold"
-                        style={{ backgroundColor: '#3d2e26', color: '#c4a882' }}>
-                  {m.actif ? 'Masquer' : 'Afficher'}
-                </button>
-                <button onClick={() => deleteMedia(m.id, m.url)}
-                        className="w-full py-1.5 rounded-lg text-xs font-semibold"
-                        style={{ backgroundColor: '#c0392b', color: 'white' }}>
-                  Supprimer
-                </button>
+                {m.legende && (
+                  <div className="px-3 py-2">
+                    <p className="text-xs truncate" style={{ color: '#c4a882' }}>{m.legende}</p>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 p-2">
+                  <button onClick={() => toggleActif(m.id, m.actif)}
+                          className="w-full py-1.5 rounded-lg text-xs font-semibold"
+                          style={{ backgroundColor: '#3d2e26', color: '#c4a882' }}>
+                    {m.actif ? 'Masquer' : 'Afficher'}
+                  </button>
+                  <button onClick={() => deleteMedia(m.id)}
+                          className="w-full py-1.5 rounded-lg text-xs font-semibold"
+                          style={{ backgroundColor: '#c0392b', color: 'white' }}>
+                    Supprimer
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
+
+      {/* Photos */}
+      {photos.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: '#c4a882' }}>📷 Photos ({photos.length})</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {photos.map(m => (
+              <div key={m.id} className="relative group rounded-xl overflow-hidden"
+                   style={{ backgroundColor: '#2a1f1a', border: '1px solid #3d2e26', opacity: m.actif ? 1 : 0.5 }}>
+                <img src={m.url} alt={m.legende || ''} className="w-full aspect-square object-cover" />
+                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 p-2">
+                  <button onClick={() => toggleActif(m.id, m.actif)}
+                          className="w-full py-1.5 rounded-lg text-xs font-semibold"
+                          style={{ backgroundColor: '#3d2e26', color: '#c4a882' }}>
+                    {m.actif ? 'Masquer' : 'Afficher'}
+                  </button>
+                  <button onClick={() => deleteMedia(m.id, m.url)}
+                          className="w-full py-1.5 rounded-lg text-xs font-semibold"
+                          style={{ backgroundColor: '#c0392b', color: 'white' }}>
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {medias.length === 0 && (
         <div className="text-center py-12 rounded-2xl" style={{ backgroundColor: '#2a1f1a' }}>
           <p className="text-4xl mb-3">🖼️</p>
