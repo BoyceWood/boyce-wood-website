@@ -1,43 +1,23 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: { headers: request.headers },
-  })
+  const isLoginPath = request.nextUrl.pathname === '/admin/login'
+  
+  // Laisse toujours passer /admin/login sans vérification
+  if (isLoginPath) {
+    return NextResponse.next()
+  }
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
+  // Pour les autres pages /admin, vérifie le cookie Supabase
+  const hasSession = request.cookies.has('sb-access-token') || 
+    [...request.cookies.getAll()].some(c => c.name.includes('auth-token'))
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const isAdminPath = request.nextUrl.pathname.startsWith('/admin')
-  const isLoginPath = request.nextUrl.pathname.startsWith('/admin/login')
-
-  if (isAdminPath && !isLoginPath && !user) {
+  if (!hasSession) {
     return NextResponse.redirect(new URL('/admin/login', request.url))
   }
 
-  return response
+  return NextResponse.next()
 }
 
 export const config = {
